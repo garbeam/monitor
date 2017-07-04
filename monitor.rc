@@ -1,0 +1,99 @@
+#!/usr/local/plan9/bin/rc
+#
+# requires
+#  - 9base
+#  - ping
+#  - curl
+#  - netcat (nc)
+#  - dig
+# 
+PATH=/usr/local/plan9/bin:$PATH
+
+hosts=(\
+	suckless.org:88.99.169.165:garbeam@gmail.com:0:1:1:0\
+	sta.li:88.99.169.165:garbeam@gmail.com:0:1:0.0\
+	garbe.us:94.130.56.76:garbeam@gmail.com:0:1:1:0\
+)
+
+fn ok {
+	line=$line^' 1'
+	html=$html^'<td class="ok">OK</td>'
+}
+
+fn fail {
+	line=$line^' 0'
+	if(~ $1 '1') {
+		html=$html^'<td class="fail">FAIL</td>'
+		failtext=$failtext^'['^$2^': FAIL]'
+	}
+	if not
+		html=$html^'<td class="na">NA</td>'
+}
+
+fn check_host {
+	ifs=(':') { pair=`{echo -n $1} }
+	host=$pair(1)
+	ip=$pair(2)
+	contact=$pair(3)
+	icmp_required=$pair(4)
+	http_required=$pair(5)
+	dns_required=$pair(6)
+	smtp_required=$pair(7)
+	failtext=''
+	line=`{date -n}
+	now=`{date -u}
+	html='<tr><td>'^$"now^'</td>'
+# ICMP
+	if(ping -c 1 $host >/dev/null >[2]/dev/null)
+		ok
+	if not {
+		sleep 5
+		if(ping -c 1 $host >/dev/null >[2]/dev/null)
+			ok
+		if not
+			fail $icmp_required 'ICMP'
+	}
+# HTTP
+	if(curl -I 'http://'^$host --connect-timeout 10 >/dev/null >[2]/dev/null)
+		ok
+	if not {
+		sleep 5
+		if(curl -I 'http://'^$host --connect-timeout 10 >/dev/null >[2]/dev/null)
+			ok
+		if not
+			fail $http_required 'HTTP'
+	}
+# DNS
+	if(dig $host | grep -v '^;' | grep A | grep $ip >/dev/null >[2]/dev/null)
+		ok
+	if not {
+		sleep 5
+		if(dig $host | grep -v '^;' | grep A | grep $ip >/dev/null >[2]/dev/null)
+			ok
+		if not
+			fail $dns_required 'DNS'
+	}
+# SMTP
+	if(nc -z -w 5 $host 25 >/dev/null >[2]/dev/null)
+		ok
+	if not {
+		sleep 5
+		if(nc -z -w 5 $host 25 >/dev/null >[2]/dev/null)
+			ok
+		if not
+			fail $smtp_required 'SMTP'
+	}
+	echo $line >> '/data/'^$host^'.dat'
+	gnuplot '/data/'^$host^'.gnu' > '/var/www/static/monitor.garbe.us/'^$host^'.png'
+	html=$html^'<td><img src="'^$host^'.png"/></td></tr>'
+	echo $html >> /var/www/static/monitor.garbe.us/index.html
+	if(~ $failtext '')
+		;
+	if not
+		echo $failtext | mail -s $host $contact
+}
+
+cat /var/www/static/monitor.garbe.us/head.tpl > /var/www/static/monitor.garbe.us/index.html
+for(i in $hosts)
+	check_host $i
+cat /var/www/static/monitor.garbe.us/foot.tpl >> /var/www/static/monitor.garbe.us/index.html
