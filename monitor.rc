@@ -10,9 +10,10 @@
 PATH=/usr/local/plan9/bin:$PATH
 
 hosts=(\
-	suckless.org:88.99.169.165:garbeam@gmail.com:0:1:1:0\
-	sta.li:88.99.169.165:garbeam@gmail.com:0:1:0.0\
-	garbe.us:94.130.56.76:garbeam@gmail.com:0:1:1:0\
+	suckless.org:88.99.169.165:garbeam@gmail.com:1:1:1:1\
+	sta.li:88.99.169.165:garbeam@gmail.com:1:1:0.0\
+	garbe.us:94.130.56.76:garbeam@gmail.com:1:1:1:1\
+	flycyg.com:35.156.38.103:garbeam@gmail.com:0:1:1:1\
 )
 
 fn ok {
